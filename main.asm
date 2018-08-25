@@ -13,40 +13,13 @@ out DDRB, r16
 
 
 
-main2:
-inc r0
-  mov r16,r0
-  rcall transmit
-  rcall wait
+; main2:
+; inc r0
+  ; mov r16,r0
+  ; rcall transmit
+  ; rcall wait
 
-  rjmp main2
-
-
-
-
-transmit:
-; 16Mhz, 1Mbaud - each bit is 16 cycles
-
-ldi r18,10
-
-  ldi r17,0
-  out PORTB, r17
-  rjmp PC+1
-  nop
-transmitloop:
-  rjmp PC+1
-  rjmp PC+1
-  rjmp PC+1
-  rjmp PC+1
-  mov r17,r16
-  sec
-  ror r16
-  andi r17,1
-  out PORTB,r17
-  dec r18
-  brne transmitloop
-
-ret
+  ; rjmp main2
 
 
 
@@ -75,14 +48,17 @@ ret
 
 
 
-  ldi r16, 1<<UCSZ01 | 1<<UCSZ00
-  sts UCSR0C, r16
 
 
-  ldi r16,0
-  sts UBRR0L, r16
-  ldi r16,0
-  sts UBRR0H, r16
+
+  ; ldi r16, 1<<UCSZ01 | 1<<UCSZ00
+  ; sts UCSR0C, r16
+
+
+  ; ldi r16,0
+  ; sts UBRR0L, r16
+  ; ldi r16,0
+  ; sts UBRR0H, r16
 
 
 
@@ -90,14 +66,11 @@ ret
 asdf:
   ldi ZH, HIGH(ledOn2*2)
   ldi ZL,  LOW(ledOn2*2)
-  ldi r18, 7
+  ldi r19, 7
   rcall sendData
   
 
   
-rcall wait
-rcall wait
-rcall wait
 rcall wait
 rcall wait
 rjmp asdf
@@ -108,7 +81,7 @@ rjmp asdf
   
   ldi ZH, HIGH(torqueEnable*2)
   ldi ZL,  LOW(torqueEnable*2)
-  ldi r18, 7
+  ldi r19, 7
   rcall sendData
   
   rcall USART_Receive
@@ -126,7 +99,7 @@ main:
 
   ldi ZH, HIGH(goalzero*2)
   ldi ZL,  LOW(goalzero*2)
-  ldi r18, 8
+  ldi r19, 8
   rcall sendData
   
 
@@ -142,27 +115,32 @@ main:
 
 
 sendData:
-  ldi r16,  1<<TXEN0
-  sts UCSR0B, r16
+;  ldi r16,  1<<TXEN0
+;  sts UCSR0B, r16
+
+  sbi DDRB,0 ; TX EN
+
+
   clr r15
   loop1:
     lpm r16,Z+
-    rcall USART_Transmit
-    dec r18
+    rcall transmit
+    dec r19
     brne loop1
 
   ; checksum
   ldi r16, 253
   sub r16, r15
-  rcall USART_Transmit
+  rcall transmit
 
 waitDone:
   lds r17, UCSR0A
   sbrs r17, UDRE0
   rjmp waitDone
 
-  ldi r16, 1<<RXEN0 
-  sts UCSR0B, r16
+  ; ldi r16, 1<<RXEN0 
+  ; sts UCSR0B, r16
+  cbi DDRB,0
   ret
 
 
@@ -181,7 +159,7 @@ data1:
 ;     FF    FF    ID   Len    Op  data  data
 
 ledOn2:
-.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x19, 0x00
+.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x19, 0x01
 
 
 setID:
@@ -225,16 +203,46 @@ wait1:
 
 
 
-USART_Transmit:
-  ; Wait for empty transmit buffer
-  lds r17, UCSR0A
-  sbrs r17, UDRE0
-  rjmp USART_Transmit
+
+transmit:
+; 16Mhz, 1Mbaud - each bit is 16 cycles
 
   add r15,r16 ; tally for checksum
-  ; Put data (r16) into buffer, sends the data
-  sts UDR0,r16
-  ret
+  ldi r18,10
+
+  ldi r17,0
+  out PORTB, r17
+  rjmp PC+1
+  nop
+transmitloop:
+  rjmp PC+1
+  rjmp PC+1
+  rjmp PC+1
+  rjmp PC+1
+  mov r17,r16
+  sec
+  ror r16
+  andi r17,1
+  out PORTB,r17
+  dec r18
+  brne transmitloop
+
+ret
+
+
+
+
+
+; USART_Transmit:
+ ; Wait for empty transmit buffer
+  ; lds r17, UCSR0A
+  ; sbrs r17, UDRE0
+  ; rjmp USART_Transmit
+
+  ; add r15,r16 ; tally for checksum
+ ; Put data (r16) into buffer, sends the data
+  ; sts UDR0,r16
+; ret
 
 
 
@@ -245,4 +253,4 @@ USART_Receive:
   rjmp USART_Receive
   ; Get and return received data from buffer
   lds r16, UDR0
-  ret
+ret
