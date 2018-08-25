@@ -1,25 +1,9 @@
 .include "m328pdef.inc"
 
+
 ; PD0 RXD
-; PD1 TXD
 
-
-
-
-
-ldi r16, 1<<0
-out DDRB, r16
-
-
-
-
-; main2:
-; inc r0
-  ; mov r16,r0
-  ; rcall transmit
-  ; rcall wait
-
-  ; rjmp main2
+; PB0 TX/RX
 
 
 
@@ -30,83 +14,52 @@ out DDRB, r16
 
 
 
+  ldi r16, 1<<UCSZ01 | 1<<UCSZ00
+  sts UCSR0C, r16
+  ldi r16, 1<<RXEN0
+  sts UCSR0B, r16
+
+
+  ldi r16,0
+  sts UBRR0L, r16
+  ldi r16,0
+  sts UBRR0H, r16
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  ; ldi r16, 1<<UCSZ01 | 1<<UCSZ00
-  ; sts UCSR0C, r16
-
-
-  ; ldi r16,0
-  ; sts UBRR0L, r16
-  ; ldi r16,0
-  ; sts UBRR0H, r16
-
-
-
-
-asdf:
-  ldi ZH, HIGH(ledOn2*2)
-  ldi ZL,  LOW(ledOn2*2)
-  ldi r19, 7
-  rcall sendData
-  
-
-  
-rcall wait
-rcall wait
-rjmp asdf
-  
-
-
-
-  
+initServos:
   ldi ZH, HIGH(torqueEnable*2)
   ldi ZL,  LOW(torqueEnable*2)
   ldi r19, 7
   rcall sendData
-  
-  rcall USART_Receive
-  rcall USART_Receive
-  rcall USART_Receive
-  rcall USART_Receive
-  rcall USART_Receive
-  rcall USART_Receive
-  
-  
+
   rcall wait
+
+
   
 main:
 
+  rcall USART_Receive
+  cpi r16, $55
+  brne main
 
-  ldi ZH, HIGH(goalzero*2)
-  ldi ZL,  LOW(goalzero*2)
-  ldi r19, 8
-  rcall sendData
+  rcall USART_Receive
+  mov ZH, r16
+  rcall USART_Receive
+  mov ZL, r16
+
+  rcall setPosition
+
+  ; ldi ZH, HIGH(goalzero*2)
+  ; ldi ZL,  LOW(goalzero*2)
+  ; ldi r19, 8
+  ; rcall sendData
   
 
-  rcall wait
+
   rcall wait
 
-;  rcall USART_Receive
 
 
 ;hang: rjmp hang
@@ -115,11 +68,7 @@ main:
 
 
 sendData:
-;  ldi r16,  1<<TXEN0
-;  sts UCSR0B, r16
-
   sbi DDRB,0 ; TX EN
-
 
   clr r15
   loop1:
@@ -133,18 +82,47 @@ sendData:
   sub r16, r15
   rcall transmit
 
-waitDone:
-  lds r17, UCSR0A
-  sbrs r17, UDRE0
-  rjmp waitDone
-
-  ; ldi r16, 1<<RXEN0 
-  ; sts UCSR0B, r16
   cbi DDRB,0
   ret
 
 
+setPosition:
+  sbi DDRB,0 ; TX EN
+  clr r15
 
+  ldi r16,0xFF
+  rcall transmit
+  ldi r16,0xFF
+  rcall transmit
+  ldi r16,0xFE
+  rcall transmit
+  ldi r16,0x0A ;length
+  rcall transmit
+  ldi r16,0x83 ;instruction sync write
+  rcall transmit
+  ldi r16,0x1E ;param 1
+  rcall transmit
+  ldi r16,0x02 ;length of data
+  rcall transmit
+  ldi r16,0x01 ;data 1
+  rcall transmit
+  mov r16,ZL 
+  rcall transmit
+  mov r16,ZH
+  rcall transmit
+  ldi r16,0x02 ;data 2
+  rcall transmit
+  mov r16,ZL
+  rcall transmit
+  mov r16,ZH 
+  rcall transmit
+
+
+  ;checksum
+  ldi r16, 253
+  sub r16, r15
+  rcall transmit
+ret
 
 
 data1:
@@ -174,10 +152,10 @@ goalff:
 
 
 torqueEnable:
-.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x18, 0x01 ; Torque Enable 
+.db 0xFF, 0xFF, 0xFE, 0x04, 0x03, 0x18, 0x01
 
 retDelay:
-.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x05, 0x01 ; Set return delay to 1 (default 250)
+.db 0xFF, 0xFF, 0xFE, 0x04, 0x03, 0x05, 0x01 ; Set return delay to 1 (default 250)
 
 
 
