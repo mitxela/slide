@@ -21,38 +21,56 @@
 
   
 
-main:
+
   
+
+
+
+  
+  ldi ZH, HIGH(torqueEnable*2)
+  ldi ZL,  LOW(torqueEnable*2)
+  ldi r18, 7
+  rcall sendData
+  
+  rcall USART_Receive
+  rcall USART_Receive
+  rcall USART_Receive
+  rcall USART_Receive
+  rcall USART_Receive
+  rcall USART_Receive
+  
+  
+  rcall wait
+  
+main:
+
+
+  ldi ZH, HIGH(goalzero*2)
+  ldi ZL,  LOW(goalzero*2)
+  ldi r18, 8
+  rcall sendData
+  
+
+  rcall wait
+  rcall wait
+
+;  rcall USART_Receive
+
+
+;hang: rjmp hang
+
+  rjmp main
+
+
+sendData:
   ldi r16,  1<<TXEN0
   sts UCSR0B, r16
-
-
   clr r15
-  ; ldi ZH, HIGH(data1*2)
-  ; ldi ZL,  LOW(data1*2)
-  ; ldi r18, 5
-
- inc r0
-
-  ldi r16,$FF
-  rcall USART_Transmit
-  ldi r16,$FF
-  rcall USART_Transmit
-  mov r16,r0
-  rcall USART_Transmit
-  ldi r16,$02
-  rcall USART_Transmit
-  ldi r16,$01
-  rcall USART_Transmit
-
-
-  
-  
-  ; loop1:
-    ; lpm r16,Z+
-    ; rcall USART_Transmit
-    ; dec r18
-    ; brne loop1
+  loop1:
+    lpm r16,Z+
+    rcall USART_Transmit
+    dec r18
+    brne loop1
 
   ; checksum
   ldi r16, 253
@@ -66,23 +84,10 @@ waitDone:
 
   ldi r16, 1<<RXEN0 
   sts UCSR0B, r16
-
-  rcall wait
-
-
-;  rcall USART_Receive
-;  rcall USART_Receive
-;  rcall USART_Receive
-;  rcall USART_Receive
-;  rcall USART_Receive
-;  rcall USART_Receive
-;  rcall USART_Receive
-;  rcall USART_Receive
+  ret
 
 
-;hang: rjmp hang
 
-  rjmp main
 
 
 data1:
@@ -94,7 +99,20 @@ data1:
 
 ;.db 0xFF, 0xFF, 0xFE, 0x04, 0x03, 0x03, 0x01
 
-.db 0xFF, 0xFF, 0xFE, 0x02, 0x01
+;     FF    FF    ID   Len    Op  data  data
+goalzero:
+.db 0xFF, 0xFF, 0x01, 0x05, 0x03, 0x1e, 0x00, 0x00
+
+goalff:
+.db 0xFF, 0xFF, 0x01, 0x05, 0x03, 0x1e, 0xff, 0x03
+
+
+
+torqueEnable:
+.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x18, 0x01 ; Torque Enable 
+
+retDelay:
+.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x05, 0x01 ; Set return delay to 1 (default 250)
 
 
 
@@ -110,7 +128,7 @@ crash1:
 
 
 wait:
-  ldi XH,250
+  ldi XH,50
   ldi XL,0
 wait1:
   sbiw X,1
