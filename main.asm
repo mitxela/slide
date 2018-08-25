@@ -5,6 +5,76 @@
 
 
 
+
+
+ldi r16, 1<<0
+out DDRB, r16
+
+
+
+
+main2:
+inc r0
+  mov r16,r0
+  rcall transmit
+  rcall wait
+
+  rjmp main2
+
+
+
+
+transmit:
+; 16Mhz, 1Mbaud - each bit is 16 cycles
+
+ldi r18,10
+
+  ldi r17,0
+  out PORTB, r17
+  rjmp PC+1
+  nop
+transmitloop:
+  rjmp PC+1
+  rjmp PC+1
+  rjmp PC+1
+  rjmp PC+1
+  mov r17,r16
+  sec
+  ror r16
+  andi r17,1
+  out PORTB,r17
+  dec r18
+  brne transmitloop
+
+ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   ldi r16, 1<<UCSZ01 | 1<<UCSZ00
   sts UCSR0C, r16
 
@@ -111,7 +181,7 @@ data1:
 ;     FF    FF    ID   Len    Op  data  data
 
 ledOn2:
-.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x19, 0x01
+.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x19, 0x00
 
 
 setID:
