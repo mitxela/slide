@@ -1,26 +1,52 @@
 .include "m328pdef.inc"
 
 
-; PD0 RXD
+; PD0 RXD midi
 
-; PB0 TX/RX
+; PB0 TX/RX ax-12
 
-
-
-
-
+; valve servo PB2
+; motor control PD6
 
 
+; timer for servo pwm signal
+  ldi r16, 1<<2
+  out DDRB, r16
+  ldi r16, 1<<COM1B1 | 1<<WGM11 | 1<<WGM10
+  sts TCCR1A, r16
+  ldi r16, 1<<WGM13 | 1<<CS11
+  sts TCCR1B, r16
+
+  ldi r16,$50
+  sts OCR1AH, r16
+  ldi r16,$00
+  sts OCR1AL, r16
+
+  ldi r16,$02
+  sts OCR1BH, r16
+  ldi r16,$ff
+  sts OCR1BL, r16
+
+;timer for motor control pwm
+  ldi r16, 1<<6
+  out DDRD, r16
+  ldi r16, 1<<COM0A1 | 1<<WGM00
+  out TCCR0A, r16
+  ldi r16, 1<<CS00
+  out TCCR0B, r16
+
+  ldi r16, 1
+  out OCR0A, r16
 
 
-
+; uart
   ldi r16, 1<<UCSZ01 | 1<<UCSZ00
   sts UCSR0C, r16
   ldi r16, 1<<RXEN0
   sts UCSR0B, r16
 
 
-  ldi r16,0
+  ldi r16,31 ;31250bps
   sts UBRR0L, r16
   ldi r16,0
   sts UBRR0H, r16
@@ -41,6 +67,10 @@ initServos:
 main:
 
   rcall USART_Receive
+  cpi r16, $44
+  breq servo
+  cpi r16, $33
+  breq motor
   cpi r16, $55
   brne main
 
@@ -65,6 +95,20 @@ main:
 ;hang: rjmp hang
 
   rjmp main
+
+servo:
+  rcall USART_Receive
+  sts OCR1BH, r16
+  rcall USART_Receive
+  sts OCR1BL, r16
+
+  rjmp main
+
+motor:
+  rcall USART_Receive
+  out OCR0A, r16
+  rjmp main
+
 
 
 sendData:
@@ -112,9 +156,12 @@ setPosition:
   rcall transmit
   ldi r16,0x02 ;data 2
   rcall transmit
-  mov r16,ZL
+  ldi r19, $03
+  ldi r16, $ff
+  sub r16, Zl
+  sbc r19, ZH
   rcall transmit
-  mov r16,ZH 
+  mov r16,r19
   rcall transmit
 
 
