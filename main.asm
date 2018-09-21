@@ -9,6 +9,14 @@
 ; motor control PD6
 
 
+.def rStatus = r20
+
+.dseg
+  noteStack: .byte 128
+
+
+.cseg
+
 ; timer for servo pwm signal
   ldi r16, 1<<2
   out DDRB, r16
@@ -63,32 +71,96 @@ initServos:
   rcall wait
 
 
+  ldi YH,high(noteStack)
+  ldi YL, low(noteStack)
+
+
+
   
 main:
 
-  rcall USART_Receive
-  cpi r16, $44
-  breq servo
-  cpi r16, $33
-  breq motor
-  cpi r16, $55
-  brne main
+  rcall receiveByte
 
-  rcall USART_Receive
-  mov ZH, r16
-  rcall USART_Receive
-  mov ZL, r16
+  cpi rStatus, 0x90
+  breq noteOn
+  cpi rStatus, 0x80
+  breq noteOff
+  cpi rStatus, 0xE0
+  breq pitchBend
 
-  rcall setPosition
-
-  ; ldi ZH, HIGH(goalzero*2)
-  ; ldi ZL,  LOW(goalzero*2)
-  ; ldi r19, 8
-  ; rcall sendData
-  
+rjmp main
 
 
-  rcall wait
+noteOn:
+  sbrc r16,7
+  rcall receiveByte
+  mov r17, r16
+  rcall receiveByte
+
+  cpi r16,0
+	breq noteoffb
+
+
+    ldi r16,40
+    out OCR0A, r16
+
+
+  rjmp main
+
+noteOff:
+  sbrc r16,7
+  rcall receiveByte
+  mov r17, r16
+  rcall receiveByte
+noteoffb:
+
+
+; all noteoffs turn motor off
+    ldi r16,0
+    out OCR0A, r16
+
+  rjmp main
+
+
+
+
+pitchBend:
+  sbrc r16,7
+  rcall receiveByte
+  mov r17, r16
+  rcall receiveByte
+
+
+  rjmp main
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ; rcall USART_Receive
+  ; mov ZH, r16
+  ; rcall USART_Receive
+  ; mov ZL, r16
+  ; rcall setPosition
+
+
+  ; rcall wait
 
 
 
@@ -96,18 +168,18 @@ main:
 
   rjmp main
 
-servo:
-  rcall USART_Receive
-  sts OCR1BH, r16
-  rcall USART_Receive
-  sts OCR1BL, r16
+; servo:
+  ; rcall USART_Receive
+  ; sts OCR1BH, r16
+  ; rcall USART_Receive
+  ; sts OCR1BL, r16
 
-  rjmp main
+  ; rjmp main
 
-motor:
-  rcall USART_Receive
-  out OCR0A, r16
-  rjmp main
+; motor:
+  ; rcall USART_Receive
+  ; out OCR0A, r16
+  ; rjmp main
 
 
 
@@ -183,26 +255,26 @@ data1:
 
 ;     FF    FF    ID   Len    Op  data  data
 
-ledOn2:
-.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x19, 0x01
+;ledOn2:
+;.db 0xFF, 0xFF, 0x01, 0x04, 0x03, 0x19, 0x01
 
 
-setID:
-.db 0xFF, 0xFF, 0xFE, 0x04, 0x03, 0x03, 0x02
+;setID:
+;.db 0xFF, 0xFF, 0xFE, 0x04, 0x03, 0x03, 0x02
 
-goalzero:
-.db 0xFF, 0xFF, 0x01, 0x05, 0x03, 0x1e, 0x00, 0x00
+;goalzero:
+;.db 0xFF, 0xFF, 0x01, 0x05, 0x03, 0x1e, 0x00, 0x00
 
-goalff:
-.db 0xFF, 0xFF, 0x01, 0x05, 0x03, 0x1e, 0xff, 0x03
+;goalff:
+;.db 0xFF, 0xFF, 0x01, 0x05, 0x03, 0x1e, 0xff, 0x03
 
 
 
 torqueEnable:
 .db 0xFF, 0xFF, 0xFE, 0x04, 0x03, 0x18, 0x01
 
-retDelay:
-.db 0xFF, 0xFF, 0xFE, 0x04, 0x03, 0x05, 0x01 ; Set return delay to 1 (default 250)
+;retDelay:
+;.db 0xFF, 0xFF, 0xFE, 0x04, 0x03, 0x05, 0x01 ; Set return delay to 1 (default 250)
 
 
 
@@ -257,25 +329,13 @@ ret
 
 
 
-
-; USART_Transmit:
- ; Wait for empty transmit buffer
-  ; lds r17, UCSR0A
-  ; sbrs r17, UDRE0
-  ; rjmp USART_Transmit
-
-  ; add r15,r16 ; tally for checksum
- ; Put data (r16) into buffer, sends the data
-  ; sts UDR0,r16
-; ret
-
-
-
-USART_Receive:
-  ; Wait for data to be received
-  lds r17, UCSR0A
-  sbrs r17, RXC0
-  rjmp USART_Receive
-  ; Get and return received data from buffer
+receiveByte:
+  lds r16, UCSR0A
+  sbrs r16, RXC0
+  rjmp receiveByte
   lds r16, UDR0
+
+  sbrc r16,7
+  mov rStatus,r16
+
 ret
