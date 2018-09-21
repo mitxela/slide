@@ -179,9 +179,19 @@ setNote:
   lsl r17
   add ZL, r17
   adc ZH, r16
+
+  lpm r16, Z+
+  out OCR0A, r16
+
+
+  clr XH
   lpm XL, Z+
-  lpm XH, Z+
-  
+  ldi r16, 0x02
+  ldi r17, 0x30
+
+  add XL, r17
+  adc XH, r16
+
   rcall setPosition
 
   ret
@@ -394,29 +404,28 @@ ret
 
 
 lookupTable:
-.dw 560
-.dw 573
-.dw 584
-.dw 595
-.dw 606
-.dw 617
-.dw 628
-.dw 639
-.dw 648
-.dw 658
-.dw 669
-.dw 679
-.dw 689
-.dw 698
-.dw 709
-.dw 720
-.dw 730
-.dw 742
-.dw 755
-.dw 771
-.dw 771
-.dw 771
-.dw 771
-.dw 771
+.db $30, $00
+.db $33, $0d
+.db $36, $18
+.db $3a, $23
+.db $3d, $2e
+.db $40, $39
+.db $43, $44
+.db $46, $4f
+.db $49, $58
+.db $4c, $62
+.db $4f, $6d
+.db $52, $77
+.db $54, $81
+.db $57, $8a
+.db $5a, $95
+.db $5d, $a0
+.db $60, $aa
+.db $64, $b6
+.db $67, $c3
+.db $6c, $d3
+
+.db $6c, $d3
+.db $6c, $d3
 
 

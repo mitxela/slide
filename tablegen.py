@@ -240,4 +240,8 @@ while (n<89):
   n+= 1#1/32.0
 
 for i in table:
-  print(i)
+  speed = 0x30 + (0x70-0x30) * (i-0x230)/(0x310-0x230)
+  speed = int(speed)
+  packed = (i-0x230) & 0xFF
+  #if (i-0x230 > 0xFF): speed +=0x80
+  print(".db $%02x, $%02x" % (speed, packed))
