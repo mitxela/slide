@@ -229,15 +229,15 @@ avg = {
 }
 
 table=[]
-n = 69.0
-while (n<89):
+n = 67.0
+while (n<91):
   targetFreq = 440*math.pow(2, (n-69)/12.0 )
   guess=560
   for k in avg:
     error = abs(avg[k]-targetFreq)
     if ( error < abs(avg[guess]-targetFreq) ): guess=k
   table.append(guess)
-  n+= 1#1/32.0
+  n+= 1/32.0
 
 for i in table:
   speed = 0x30 + (0x70-0x30) * (i-0x230)/(0x310-0x230)
