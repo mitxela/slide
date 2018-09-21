@@ -11,11 +11,6 @@
 
 .def rStatus = r20
 
-.dseg
-  noteStack: .byte 128
-
-
-.cseg
 
 ; timer for servo pwm signal
   ldi r16, 1<<2
@@ -71,8 +66,8 @@ initServos:
   rcall wait
 
 
-  ldi YH,high(noteStack)
-  ldi YL, low(noteStack)
+  ldi YH,1
+  ldi YL,0
 
 
 
@@ -100,9 +95,13 @@ noteOn:
   cpi r16,0
 	breq noteoffb
 
+  st Y+, r17
+
 
     ldi r16,40
     out OCR0A, r16
+
+  rcall setNote
 
 
   rjmp main
@@ -114,10 +113,39 @@ noteOff:
   rcall receiveByte
 noteoffb:
 
+movw X,Y
 
-; all noteoffs turn motor off
+
+noteOffLook:
+  ld r19,-Y
+  cp r17,r19
+  brne noteOffLook
+
+noteOffMove:
+  ldd r16,Y+1
+  st Y+,r16
+  cp YL,XL
+  cpc YH,XH
+  brne noteOffMove
+
+
+sbiw Y,1
+
+
+  cpi YL,0
+  breq changeNote
+
+
+
     ldi r16,0
     out OCR0A, r16
+
+changeNote:
+
+  ld r17,-Y
+  adiw Y,1
+  rcall setNote
+
 
   rjmp main
 
@@ -139,10 +167,29 @@ pitchBend:
 
 
 
+setNote:
+  cpi r17,89
+  brcc outOfRange
+  subi r17,69
+  brcs outOfRange
 
+  ldi ZH, high(lookupTable*2)
+  ldi ZL,  low(lookupTable*2)
+  clr r16
+  lsl r17
+  add ZL, r17
+  adc ZH, r16
+  lpm XL, Z+
+  lpm XH, Z+
+  
+  rcall setPosition
 
+  ret
 
-
+outOfRange:
+    ldi r16,0
+    out OCR0A, r16
+  ret
 
 
 
@@ -222,16 +269,16 @@ setPosition:
   rcall transmit
   ldi r16,0x01 ;data 1
   rcall transmit
-  mov r16,ZL 
+  mov r16,XL 
   rcall transmit
-  mov r16,ZH
+  mov r16,XH
   rcall transmit
   ldi r16,0x02 ;data 2
   rcall transmit
   ldi r19, $03
   ldi r16, $ff
-  sub r16, Zl
-  sbc r19, ZH
+  sub r16, XL
+  sbc r19, XH
   rcall transmit
   mov r16,r19
   rcall transmit
@@ -339,3 +386,37 @@ receiveByte:
   mov rStatus,r16
 
 ret
+
+
+
+
+
+
+
+lookupTable:
+.dw 560
+.dw 573
+.dw 584
+.dw 595
+.dw 606
+.dw 617
+.dw 628
+.dw 639
+.dw 648
+.dw 658
+.dw 669
+.dw 679
+.dw 689
+.dw 698
+.dw 709
+.dw 720
+.dw 730
+.dw 742
+.dw 755
+.dw 771
+.dw 771
+.dw 771
+.dw 771
+.dw 771
+
+
