@@ -12,6 +12,21 @@
 .def rStatus = r20
 .def rBend   = r21
 
+#define valve_servo_off $0d
+#define valve_servo_on $60
+
+rjmp init
+
+.org 0x006 ; WDT
+
+    ldi r16,0
+    out OCR0A, r16
+  
+  reti
+
+
+
+init:
 
 ; timer for servo pwm signal
   ldi r16, 1<<2
@@ -26,9 +41,9 @@
   ldi r16,$00
   sts OCR1AL, r16
 
-  ldi r16,$02
+  ldi r16,$03
   sts OCR1BH, r16
-  ldi r16,$ff
+  ldi r16, valve_servo_off
   sts OCR1BL, r16
 
 ;timer for motor control pwm
@@ -54,6 +69,9 @@
   sts UBRR0L, r16
   ldi r16,0
   sts UBRR0H, r16
+
+
+
 
 
 
@@ -96,8 +114,15 @@ noteOn:
   cpi r16,0
 	breq noteoffb
 
+rcall watchdogOff
+
   st Y+, r17
 
+
+  ldi r16,$03
+  sts OCR1BH, r16
+  ldi r16, valve_servo_on
+  sts OCR1BL, r16
 
     ldi r16,40
     out OCR0A, r16
@@ -134,12 +159,18 @@ sbiw Y,1
 
 
   cpi YL,0
-  breq changeNote
+  brne changeNote
 
 
+  ldi r16,$03
+  sts OCR1BH, r16
+  ldi r16, valve_servo_off
+  sts OCR1BL, r16
 
-    ldi r16,0
-    out OCR0A, r16
+
+  rcall watchdogOn
+
+  rjmp main
 
 changeNote:
 
@@ -222,46 +253,11 @@ setNote:
   ret
 
 outOfRange:
-    ldi r16,0
-    out OCR0A, r16
+    ;ldi r16,0
+    ;out OCR0A, r16
   ret
 
 
-
-
-
-
-
-
-
-
-  ; rcall USART_Receive
-  ; mov ZH, r16
-  ; rcall USART_Receive
-  ; mov ZL, r16
-  ; rcall setPosition
-
-
-  ; rcall wait
-
-
-
-;hang: rjmp hang
-
-  rjmp main
-
-; servo:
-  ; rcall USART_Receive
-  ; sts OCR1BH, r16
-  ; rcall USART_Receive
-  ; sts OCR1BL, r16
-
-  ; rjmp main
-
-; motor:
-  ; rcall USART_Receive
-  ; out OCR0A, r16
-  ; rjmp main
 
 
 
@@ -423,9 +419,25 @@ receiveByte:
 ret
 
 
+watchdogOn:
+  wdr
+  lds r16, WDTCSR
+  ori r16, (1<<WDCE) | (1<<WDE)
+  sts WDTCSR, r16
+  ldi r16, (1<<WDIE) | (1<<WDP2) | (1<<WDP1) | (1<<WDP0)
+  sts WDTCSR, r16
+  sei
+  ret
 
-
-
+watchdogOff:
+  wdr
+  cli
+  lds r16, WDTCSR
+  ori r16, (1<<WDCE)
+  sts WDTCSR, r16
+  ldi r16, 0
+  sts WDTCSR, r16
+  ret
 
 
 lookupTable:
