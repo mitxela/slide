@@ -81,7 +81,7 @@ stream.read(CHUNK) # first chunk is junk
 
 def setPosition(x):
   if (x<0x230 or x>0x310): return;
-  speed = 0x30 + (0x70-0x30) * (x-0x230)/(0x310-0x230)
+  speed = 0x30 + (0x70-0x30) * ((x-0x230)/(0x310-0x230))**1.25
   speed = int(speed)
   s.write(bytearray([0x33,speed]))
   s.write(bytearray([0x55, x>>8, x&0xff]))
@@ -91,7 +91,7 @@ def delaySec(sec):
   for i in range(len):
     stream.read(CHUNK)
 
-
+s.write(bytearray([0x44, 0x03, 0x60])) # valve open
 setPosition(0x230)
 delaySec(4)
 
@@ -116,9 +116,9 @@ for i in range(0x0310, 0x0230-step,-step):
 
 s.write(bytearray([0x33,0x00]))
 
-print("Averages")
+print("Position Forwards Backwards Average")
 for i in range(0x0230, 0x0310+step,step):
-  print(i, (forwards[i]+backwards[i])/2.0)
+  print(i, forwards[i], backwards[i], (forwards[i]+backwards[i])/2.0)
 
 
 
