@@ -1,0 +1,38 @@
+(do
+
+	(int shorten 40)
+	(getInt shorten "Shorten amount" 1 200)
+
+	(dword lastNoteKey 128)
+	(dword lastNoteVel 0)
+	(dword lastNoteDur 0)
+	(dword lastEventTime 0)
+	(dword lastEventChan 16)
+
+	(dword final 0)
+	(forEachEvent
+		(if (== Event.Kind NOTE) (= final Event.Time))
+	)
+
+	(forEachEvent
+		(do
+			(if (== Event.Kind NOTE)
+				(do
+					(if (&& (== lastNoteKey Note.Key) (>= (+ lastEventTime lastNoteDur) (- Event.Time shorten)))
+						(= lastNoteDur (- (- Event.Time shorten) lastEventTime))
+					)
+
+					(if (!= lastEventChan 16) ; first loop - last event not set
+						(insert lastEventTime lastEventChan NOTE lastNoteKey lastNoteVel lastNoteDur)
+					)
+					(= lastNoteKey Note.Key)
+					(= lastNoteVel Note.Vel)
+					(= lastNoteDur Note.Dur)
+					(= lastEventTime Event.Time)
+					(= lastEventChan Event.Chan)
+					(if (!= Event.Time final) (delete))
+				)
+			)
+		)
+	)
+)
